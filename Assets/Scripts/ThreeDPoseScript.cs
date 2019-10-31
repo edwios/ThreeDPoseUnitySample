@@ -81,7 +81,7 @@ public class ThreeDPoseScript : MonoBehaviour
     }
 
     // Joint position and bone
-    private JointPoint[] jointPoints;
+    public JointPoint[] jointPoints;//
 
     private Vector3 initPosition; // Initial center position
 
