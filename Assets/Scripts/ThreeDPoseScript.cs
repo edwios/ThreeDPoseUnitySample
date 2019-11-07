@@ -1,4 +1,4 @@
-﻿using OpenCvSharp;
+using OpenCvSharp;
 using OpenCvSharp.Dnn;
 using System;
 using System.Collections;
