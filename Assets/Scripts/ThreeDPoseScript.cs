@@ -1,5 +1,7 @@
-using OpenCvSharp;
-using OpenCvSharp.Dnn;
+using OpenCVForUnity;
+using OpenCVForUnity.DnnModule;
+using OpenCVForUnity.CoreModule;
+using OpenCVForUnity.UnityUtils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -108,7 +110,8 @@ public class ThreeDPoseScript : MonoBehaviour
 
     // Properties for onnx and estimation
     private Net Onnx;
-    private Mat[] outputs = new Mat[4];
+    private List<Mat> outputs = new List<Mat>();
+    private List<string> outputNames = new List<string>();
 
     public GameObject TextureObject;
 
@@ -376,8 +379,15 @@ public class ThreeDPoseScript : MonoBehaviour
 
     public void InitONNX()
     {
-        Onnx = Net.ReadNetFromONNX(Application.dataPath + @"\MobileNet3D2.onnx");
-        for (var i = 0; i < 4; i++) outputs[i] = new Mat();
+        var onnxpath = Application.dataPath + @"/MobileNet3D2.onnx";
+        Debug.Log("Path : " + onnxpath);
+        Onnx = Dnn.readNetFromONNX(onnxpath);
+
+        for (var i = 0; i < 4; i++) outputs.Add(new Mat());
+        outputNames.Add("369");
+        outputNames.Add("373");
+        outputNames.Add("361");
+        outputNames.Add("365");
     }
 
     /// <summary>
@@ -386,14 +396,14 @@ public class ThreeDPoseScript : MonoBehaviour
     /// <param name="img"></param>
     public void Predict(Mat img)
     {
-        var blob = CvDnn.BlobFromImage(img, 1.0 / 255.0, new OpenCvSharp.Size(inputImageSize, inputImageSize), 0.0, false, false);
-        Onnx.SetInput(blob);
-        Onnx.Forward(outputs, new string[] { "369", "373", "361", "365" });
+        var blob = Dnn.blobFromImage(img, 1.0 / 255.0, new Size(inputImageSize, inputImageSize), new Scalar(0.0, 0.0, 0.0), false, false);
+        Onnx.setInput(blob);
+        Onnx.forward(outputs, outputNames);
 
         // copy 2D outputs
-        Marshal.Copy(outputs[2].Data, heatMap2Dbuf, 0, heatMap2Dbuf.Length);
+        Marshal.Copy((IntPtr)outputs[2].dataAddr(), heatMap2Dbuf, 0, heatMap2Dbuf.Length);
         Buffer.BlockCopy(heatMap2Dbuf, 0, heatMap2D, 0, heatMap2Dbuf.Length);
-        Marshal.Copy(outputs[3].Data, offset2Dbuf, 0, offset2Dbuf.Length);
+        Marshal.Copy((IntPtr)outputs[3].dataAddr(), offset2Dbuf, 0, offset2Dbuf.Length);
         Buffer.BlockCopy(offset2Dbuf, 0, offset2D, 0, offset2Dbuf.Length);
         for (var j = 0; j < JointNum; j++)
         {
@@ -422,9 +432,9 @@ public class ThreeDPoseScript : MonoBehaviour
         }
 
         // copy 3D outputs
-        Marshal.Copy(outputs[0].Data, heatMap3Dbuf, 0, heatMap3Dbuf.Length);
+        Marshal.Copy((IntPtr)outputs[0].dataAddr(), heatMap3Dbuf, 0, heatMap3Dbuf.Length);
         Buffer.BlockCopy(heatMap3Dbuf, 0, heatMap3D, 0, heatMap3Dbuf.Length);
-        Marshal.Copy(outputs[1].Data, offset3Dbuf, 0, offset3Dbuf.Length);
+        Marshal.Copy((IntPtr)outputs[1].dataAddr(), offset3Dbuf, 0, offset3Dbuf.Length);
         Buffer.BlockCopy(offset3Dbuf, 0, offset3D, 0, offset3Dbuf.Length);
         for (var j = 0; j < JointNum; j++)
         {
@@ -525,9 +535,15 @@ public class ThreeDPoseScript : MonoBehaviour
 
         TextureObject.GetComponent<Renderer>().material.mainTexture = dst;
 
+        var imgMat = new Mat(dst.height, dst.width, CvType.CV_8UC3);
+
+        Utils.texture2DToMat(dst, imgMat);
+
+        return imgMat;
+/*
         // Convrt to Mat
         Color32[] c = dst.GetPixels32();
-        var m = new Mat(224, 224, MatType.CV_8UC3);
+        var m = new Mat(224, 224, CvType.CV_8UC3);
         var videoSourceImageData = new Vec3b[224*224];
         for (var i = 0; i < 224; i++)
         {
@@ -546,5 +562,7 @@ public class ThreeDPoseScript : MonoBehaviour
         m.SetArray(0, 0, videoSourceImageData);
 
         return m.Flip(FlipMode.X);
+*/
+
     }
 }
